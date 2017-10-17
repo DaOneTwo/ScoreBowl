@@ -1,14 +1,6 @@
+from score_api.objects.app_errors import InvalidRoll, FrameComplete, ScoringComplete
 
-class InvalidRoll(Exception):
-    """Exception for invalid rolls on a Frame"""
-    pass
 
-class FrameComplete(Exception):
-    """Exception for action taken on a completed frame."""
-    pass
-
-class ScoringComplete(Exception):
-    """Exception for attempting to score a frame which has already been scored."""
 
 class StandardFrame(object):
     def __init__(self, max_pins:int=10):
@@ -57,9 +49,10 @@ class StandardFrame(object):
         """Do additional validation on a value passed for roll_two.
         Cannot have already rolled a strike and sum of pins passed in
         and roll_one cannot be greater than max_pins"""
-        return bool(all([self. max_pins >= self.roll_one + pins, self.is_strike is False]))
+        if not all([self. max_pins >= self.roll_one + pins, self.is_strike is False]):
+            raise InvalidRoll('Invalid value for a second roll.')
 
-    def score_roll(self, pins_down:int) -> dict:
+    def add_roll(self, pins_down:int) -> dict:
         """Add a roll according to state of the objects attributes.  Attempts to set frame total as well
         First method call sets roll_one, second sets roll_two.
 
@@ -71,11 +64,9 @@ class StandardFrame(object):
             self.roll_one = pins_down
             self._set_is_strike()
         elif self.roll_two is None:
-            if self._is_valid_roll_two(pins_down):
-                self.roll_two = pins_down
-                self._set_is_spare()
-            else:
-                raise InvalidRoll('Invalid value for 2nd roll')
+            self._is_valid_roll_two(pins_down)  # raises exception if not valid.
+            self.roll_two = pins_down
+            self._set_is_spare()
         else:
             raise InvalidRoll('Frame not eligible for additional rolls')
 
@@ -110,42 +101,37 @@ class FinalFrame(StandardFrame):
 
         self.roll_three = None  # will be utilized if is spare or is strike
 
-    def frame_complete(self):
-        """"""
-        complete = False
-        if any([self.is_strike, self.is_spare]) and self.roll_three is not None:
-            complete = True
-        elif all([not self.is_strike, not self.is_spare, self.roll_one is not None, self.roll_two is not None]):
-            complete = True
+    def _set_is_complete(self):
+        """Set the value of the is_complete attribute.  Return the attribute value."""
+        self.is_complete = any([any([self.is_strike, self.is_spare]) and self.roll_three is not None,
+                                all([not self.is_strike, not self.is_spare, self.roll_one is not None,
+                                     self.roll_two is not None])])
 
-        return complete
+        return self.is_complete
 
-    def add_roll_score(self, pins_knocked_down):
+    def add_roll(self, pins_down):
         """Add roll score"""
+        self._is_valid_roll(pins_down)
+
         if self.roll_one is None:
-            self.roll_one = pins_knocked_down
-            self.is_strike = self.was_a_strike()
+            self.roll_one = pins_down
+            self.is_strike = self._set_is_strike()
         elif self.roll_two is None:
-            self.roll_two = pins_knocked_down
-            if not self.is_strike:
-                self.is_spare = self.was_a_spare()
-            else:  # cannot be a spare if it is a strike
-                self.is_spare = False
+            self._is_valid_roll_two(pins_down)  # raises exception if not valid
+            self.roll_two = pins_down
+            self.is_spare = self._set_is_spare()
+        # only frames which have a strike or spare are allowed a third roll
         elif all([self.roll_three is None , any([self.is_strike, self.is_spare])]):
-            self.roll_three = pins_knocked_down
+            self.roll_three = pins_down
             # passing roll_three as the bonus roll one and roll_two as bonus_two will allow just one function
             # call to cover scoring the tenth frame as a strike or a spare with the way the score_frame call
-            # works (ignoring bonus_two when passed.
+            # works (ignoring bonus_two when passed).  We can score this frame immediately
             self.score_frame(bonus_one=self.roll_three, bonus_two=self.roll_two)
+        else:
+            raise InvalidRoll('Frame not valid for roll addition')
 
-        return self.__dict__()
+        # set value of is_complete and then try to score frame if it is...
+        if self._set_is_complete() and self.frame_score is None:
+            self.score_frame()
 
-    def __dict__(self):
-        """get a dictionary representation of our frame object."""
-        return {'roll_one': self.roll_one,
-                'roll_two': self.roll_two,
-                'roll_three': self.roll_three,
-                'is_strike': self.is_strike,
-                'is_spare': self.is_spare,
-                'frame_score': self.frame_score,
-                'frame_complete': self.frame_complete()}
+        return self.__dict__
