@@ -9,3 +9,6 @@ class FrameComplete(Exception):
 
 class ScoringComplete(Exception):
     """Exception for attempting to score a frame which has already been scored."""
+
+class GameOver(Exception):
+    """Exception for when a game altering actions are attempted on a completed game."""

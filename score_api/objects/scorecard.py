@@ -1,5 +1,6 @@
 
 import score_api.objects.frames as frame
+import score_api.objects.app_errors as errs
 
 class GameScorecard(object):
     def __init__(self, max_frames=10):
@@ -14,24 +15,24 @@ class GameScorecard(object):
         else:
             self.frames.append(frame.StandardFrame())
 
-    def add_roll(self, pins_down):
+    def add_roll(self, pins_down) -> dict:
         """add a roll to the scorecard.  Will add frames to to the scorecard as necessary until the game is
         complete (max_frames played)"""
         if self.game_complete is True:
-            raise Exception('Game complete cannot add a roll')
+            raise errs.GameOver('Game complete cannot add a roll')
 
         frame = self.frames[-1]
-        if frame.frame_complete() is True:
+        if frame.is_complete is True:
             frame = self.add_frame()
-        frame_details = frame.add_roll_score(pins_down)
+        frame_details = frame.add_roll(pins_down)
 
         self.get_running_total()
-        self.game_complete = bool(len(self.frames) == self.max_frames and frame.frame_complete())
+        self.game_complete = bool(len(self.frames) == self.max_frames and frame.is_complete is True)
 
-        return {'advance_player': frame_details.get('frame_complete'),
+        return {'advance_player': frame_details.get('is_complete'),
                 'player_running_score': self.running_total,
                 'player_game_complete': self.game_complete,
-                'player_scorecard_details': [frame_detail.__dict__() for frame_detail in self.frames]}
+                'player_scorecard_details': [frame_detail.__dict__ for frame_detail in self.frames]}
 
     def add_frame(self) -> frame.StandardFrame or frame.FinalFrame:
         """Add a frame object to the scorecard"""
@@ -56,7 +57,7 @@ class GameScorecard(object):
                 # return an empty frame just so we can evaluate as a frame without breaking things.
                 return frame.StandardFrame()
 
-    def get_running_total(self):
+    def get_running_total(self) -> int:
         """get the running total"""
         self.running_total = 0
         for index, frame in enumerate(self.frames, 1):
