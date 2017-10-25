@@ -70,45 +70,55 @@ class TestStandardFrame(object):
         assert (f.frame_score == roll1 + roll2)
 
     def test_score_later_strike(self):
-        """test coming back to score a strike frame later"""
+        """test coming back to score a StandardFrame strike later"""
 
         f = frames.StandardFrame()
-        f.roll_one, f.is_strike = 10, True
-
+        f.add_roll(10)
+        assert(f.is_strike is True)
+        assert(f.frame_score is None)
         # test unsuccessful scoring do this first because it will leave our object in a state which we can try
         # again
-        success, score = f.score_frame(bonus_one=10)  # with only one bonus roll
-        assert (all([not success, f.frame_score is None, f.is_complete is True,
-                     score == 'Unable to score frame with values provided.']))
-        success, score = f.score_frame()  # no bonus rolls
-        assert (all([not success, f.frame_score is None, f.is_complete is True,
-                     score == 'Unable to score frame with values provided.']))
+        score = f.score_frame(bonus_one=10)  # with only one bonus roll
+        assert(f.frame_score is None)
+        assert(f.is_complete is True)
+        assert(score is None)
 
-        # test successful scoring of a strike with 2 non strike/spare rolls (not that it makes a difference.
-        success, score = f.score_frame(bonus_one=9, bonus_two=0)
-        assert(all([success, f.frame_score == 19 == score, f.is_complete is True]))
+        score2 = f.score_frame()  # no bonus rolls
+        assert (f.frame_score is None)
+        assert (f.is_complete is True)
+        assert (score2 is None)
+
+        # test successful scoring of a strike with 2 non strike/spare rolls (not that it makes a difference).
+        score3 = f.score_frame(bonus_one=9, bonus_two=0)
+        assert(f.frame_score == 19 == score3)
+        assert(f.is_complete is True)
 
         # test successful scoring of a strike with 2 strikes afterwards
         f = frames.StandardFrame()
-        f.roll_one, f.is_strike = 10, True
-        success, score = f.score_frame(bonus_one=10, bonus_two=10)
-        assert (all([success, f.frame_score == 30 == score, f.is_complete is True]))
+        f.add_roll(10)
+        score4 = f.score_frame(bonus_one=10, bonus_two=10)
+        assert(f.frame_score == 30 == score4)
+        assert(f.is_complete is True)
 
     def test_score_later_spare(self):
         """test coming back to score a spare frame later"""
 
         f = frames.StandardFrame()
-        f.roll_one, f.roll_two, f.is_strike, f.is_spare = 8, 2, False, True
+        f.add_roll(8)
+        f.add_roll(2)
+        assert(f.is_spare is True)
+        assert(f.frame_score is None)
 
         # test unsuccessful scoring do this first because it will leave our object in a state which we can try
         # again
-        success, score = f.score_frame()  # no bonus rolls
-        assert (all([not success, f.frame_score is None, f.is_complete is True,
-                     score == 'Unable to score frame with values provided.']))
+        score = f.score_frame()  # no bonus rolls
+        assert(score is None)
+        assert(f.is_complete is True)
 
         # test a successful scoring of a spare
-        success, score = f.score_frame(bonus_one=10)
-        assert(all([success, f.frame_score == 20 == score, f.is_complete is True]))
+        score = f.score_frame(bonus_one=10)
+        assert(f.frame_score == 20 == score)
+        assert(f.is_complete is True)
 
 
 class TestFinalFrame(object):
@@ -151,9 +161,10 @@ class TestFinalFrame(object):
                      f.is_strike is False, f.is_spare is True, f.frame_score == 20,
                      f.is_complete is True]))
 
-    def test_frame_regular_joe(self):
-        """Test a "normal" frame. Something like your regular joe might roll.  IE not a strike or a spare."""
-        f = frames.StandardFrame()
+    def test_final_frame_regular_joe(self):
+        """Test a "normal" frame rolled for the last frame. Something like your regular joe might roll.
+        IE not a strike or a spare."""
+        f = frames.FinalFrame()
         roll1, roll2 = 5, 2
         f.add_roll(roll1)
         assert (all([f.roll_one == roll1, f.roll_two is None, f.is_strike is False, f.is_spare is False,

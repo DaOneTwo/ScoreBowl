@@ -101,6 +101,16 @@ class FinalFrame(StandardFrame):
 
         self.roll_three = None  # will be utilized if is spare or is strike
 
+    def _is_valid_roll_two(self, pins) -> None:
+        """Do additional validation on a value passed for roll_two.  Accommodating the fact this could be a
+        "bonus" roll.
+
+        If first roll was a strike cannot be greater than max pins.
+        Else sum of roll one and two cannot be greater than max pins."""
+        if any([all([self.is_strike, pins > self.max_pins]),
+                all([self.is_strike is False, self.max_pins < (self.roll_one + pins)])]):
+            raise InvalidRoll('Invalid value for a second roll.')
+
     def _set_is_complete(self):
         """Set the value of the is_complete attribute.  Return the attribute value."""
         self.is_complete = any([any([self.is_strike, self.is_spare]) and self.roll_three is not None,

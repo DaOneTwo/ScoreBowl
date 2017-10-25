@@ -15,7 +15,7 @@ class TestScorecard(object):
                             card.get_frame(2).roll_two is None]))
                 assert(card.get_running_total() == 15)
                 frame1 = card.get_frame(1)
-                assert(frame1.frame_complete() is True)
+                assert(frame1.is_complete is True)
                 assert(frame1.roll_one == 5 == frame1.roll_two)
                 assert(frame1.is_spare is True)
                 assert(frame1.frame_score == 15)
@@ -30,7 +30,7 @@ class TestScorecard(object):
         game_complete = False
         while not game_complete:
             details = card.add_roll(10)
-            # print(f'{roll_count} : {frame_index} : {details}')
+            print(f'{roll_count} : {frame_index} : {details}\n')
             if details.get('player_game_complete') is True:
                 game_complete = True
             else:
@@ -68,6 +68,7 @@ class TestScorecard(object):
         rolls = [2, 2, 3, 4, 5, 5, 10, 9, 0, 1, 0, 10, 5, 5, 6, 4, 9, 1, 9 ]
         frame_index = 1
         for index, roll in enumerate(rolls, 1):
+            print(f'{frame_index} : {index} : {roll}\n')
             roll_details = card.add_roll(roll)
             # check where we should advance player/frame
             if index in [2, 4, 6, 7, 9, 11, 12, 14, 16, 19]:
